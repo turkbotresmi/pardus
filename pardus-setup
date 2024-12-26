@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# 1. Termux depolarını ve temel paketleri kur
+echo "Depolar ve temel paketler hazırlanıyor..."
+termux-setup-storage
+apt update && apt install root-repo x11-repo -y
+apt upgrade -y
+apt install termux-x11-nightly proot-distro pulseaudio neofetch -y
+
+# 2. Pardus Kurulumu
+echo "Temel Pardus kuruluyor..."
+proot-distro install pardus
+proot-distro login pardus <<EOF
+
+# 3. Pardus'ta sources.list dosyasını düzenle
+echo "deb http://depo.pardus.org.tr/pardus yirmiuc main contrib non-free non-free-firmware
+deb http://depo.pardus.org.tr/pardus yirmiuc-deb main contrib non-free non-free-firmware
+deb http://depo.pardus.org.tr/guvenlik yirmiuc-deb main contrib non-free non-free-firmware" > /etc/apt/sources.list
+
+# 4. Dil Ayarları ve Locale
+apt update && apt upgrade -y
+apt install locales -y
+echo "Dil ayarı yapılıyor..."
+sed -i 's/^# *\(tr_TR.UTF-8 UTF-8\)/\1/' /etc/locale.gen
+locale-gen
+export LANG=tr_TR.UTF-8
+
+# Dil ayarlarını kalıcı yapmak için bashrc'ye ekle
+echo "export LANG=tr_TR.UTF-8" >> ~/.bashrc
+
+# 5. XFCE Kurulumu ve Temalar
+apt install xfce4 xfdesktop4=4.18.1-1 xfdesktop4-data=4.18.1-1 xfce4-goodies pardus-xfce-icon-theme pardus-gtk-theme sudo nano -y
+apt purge --remove xfce4-power-manager -y
+
+# XFCE temasını ve simge temasını ayarla
+xfconf-query -c xsettings -p /Net/ThemeName -s "pardus-gtk-theme"
+xfconf-query -c xsettings -p /Net/IconThemeName -s "pardus-xfce-icon-theme"
+
+# 6. Zaman Dilimi Ayarı
+ln -sf /usr/share/zoneinfo/Europe/Istanbul /etc/localtime
+
+# 7. Kullanıcıdan Firefox Yüklemesi için Geri Bildirim
+read -p "Firefox yüklensin mi? (e/h): " firefox_choice
+if [[ $firefox_choice == "e" ]]; then
+    apt install firefox-esr firefox-esr-l10n-tr -y
+fi
+
+# LibreOffice için geri bildirim
+if [[ $firefox_choice == "h" ]]; then
+    read -p "LibreOffice yüklensin mi? (e/h): " libreoffice_choice
+    if [[ $libreoffice_choice == "e" ]]; then
+        apt install libreoffice libreoffice-gtk3 libreoffice-l10n-tr -y
+    fi
+fi
+
+# 8. Kullanıcı Ekleme ve Yetkilendirme
+read -p "Yeni kullanıcı adı girin: " new_user
+adduser $new_user
+echo "$new_user ALL=(ALL) ALL" >> /etc/sudoers
+
+EOF
+
+# 9. Kurulum Tamam
+echo "Kurulum tamamlandı. Pardus'u başlatmak için './pardus' yazabilirsiniz. Ama Nano'dan (nano pardus komutuyla)" kullanici yazan yere az önce koyduğunuz adı yazın.
